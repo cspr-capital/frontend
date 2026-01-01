@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist_Mono } from "next/font/google";
+import { Providers } from "@/providers";
 import "./globals.css";
 
 const geistMono = Geist_Mono({
@@ -29,7 +30,7 @@ export default function RootLayout({
         className={`${geistMono.variable} antialiased`}
         style={{ fontFamily: "'Google Sans', sans-serif" }}
       >
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

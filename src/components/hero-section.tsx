@@ -1,10 +1,16 @@
+'use client'
+
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
 import { HeroHeader } from './hero-header'
+import { ConnectWallet } from '@/components/connect-wallet'
+import { useWallet } from '@/hooks/use-wallet'
 import { ArrowRight } from 'lucide-react'
 
 export default function HeroSection() {
+    const { isConnected } = useWallet()
+
     return (
         <>
             <HeroHeader />
@@ -22,12 +28,16 @@ export default function HeroSection() {
                                 </p>
 
                                 <div className="mt-12 flex flex-col items-center justify-center gap-2 sm:flex-row lg:justify-start">
-                                    <Button
-                                        size="lg"
-                                        className="gap-2 px-5 text-base">
-                                        <span className="text-nowrap">Connect Wallet</span>
-                                        <ArrowRight className="size-4" />
-                                    </Button>
+                                    {isConnected ? (
+                                        <Button asChild size="lg" className="gap-2 px-5">
+                                            <Link href="/app">
+                                                <span className="text-nowrap">Open dApp</span>
+                                                <ArrowRight className="size-4" />
+                                            </Link>
+                                        </Button>
+                                    ) : (
+                                        <ConnectWallet size="lg" />
+                                    )}
                                     <Button
                                         asChild
                                         size="lg"

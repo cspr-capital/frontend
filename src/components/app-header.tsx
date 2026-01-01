@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Logo } from '@/components/logo'
-import { Button } from '@/components/ui/button'
+import { ConnectWallet } from '@/components/connect-wallet'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -41,9 +41,7 @@ export function AppHeader() {
                         </nav>
                     </div>
                     <div className="flex items-center gap-4">
-                        <Button variant="outline" size="sm">
-                            0x1234...5678
-                        </Button>
+                        <ConnectWallet size="sm" />
                     </div>
                 </div>
             </div>

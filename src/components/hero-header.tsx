@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { Logo } from '@/components/logo'
 import { Menu, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ConnectWallet } from '@/components/connect-wallet'
+import { useWallet } from '@/hooks/use-wallet'
 import React from 'react'
 
 const menuItems = [
@@ -13,6 +15,8 @@ const menuItems = [
 
 export const HeroHeader = () => {
     const [menuState, setMenuState] = React.useState(false)
+    const { isConnected } = useWallet()
+
     return (
         <header>
             <nav
@@ -66,9 +70,12 @@ export const HeroHeader = () => {
                                 </ul>
                             </div>
                             <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit">
-                                <Button size="sm">
-                                    <span>Connect Wallet</span>
-                                </Button>
+                                {isConnected && (
+                                    <Button asChild size="sm">
+                                        <Link href="/app">Open dApp</Link>
+                                    </Button>
+                                )}
+                                <ConnectWallet size="sm" />
                             </div>
                         </div>
                     </div>

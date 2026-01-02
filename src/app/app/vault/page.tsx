@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { VaultCard } from '@/components/vault/vault-card'
 import { OpenVaultCard } from '@/components/vault/open-vault-card'
 import { VaultHistory } from '@/components/vault/vault-history'
+import { VaultActionModal } from '@/components/vault/vault-action-modal'
 
 // Mock data - toggle hasVault to see different states
 const mockVaultData = {
@@ -15,8 +16,32 @@ const mockVaultData = {
     collateralRatio: 234,
 }
 
+type ModalType = 'deposit' | 'withdraw' | 'mint' | 'repay' | null
+
 export default function VaultPage() {
     const [hasVault] = useState(true) // Toggle to test OpenVaultCard
+    const [activeModal, setActiveModal] = useState<ModalType>(null)
+
+    const getMaxAmount = () => {
+        switch (activeModal) {
+            case 'deposit':
+                return '100,000' // Mock wallet balance
+            case 'withdraw':
+                return mockVaultData.availableToWithdraw
+            case 'mint':
+                return mockVaultData.availableToMint
+            case 'repay':
+                return '3,000' // Mock cUSD balance
+            default:
+                return '0'
+        }
+    }
+
+    const handleSubmit = async (amount: string) => {
+        // Simulate transaction delay
+        await new Promise(resolve => setTimeout(resolve, 2000))
+        console.log(`${activeModal}: ${amount}`)
+    }
 
     return (
         <div className="space-y-8">
@@ -31,15 +56,26 @@ export default function VaultPage() {
                 <>
                     <VaultCard
                         data={mockVaultData}
-                        onDeposit={() => console.log('Deposit')}
-                        onWithdraw={() => console.log('Withdraw')}
-                        onMint={() => console.log('Mint')}
-                        onRepay={() => console.log('Repay')}
+                        onDeposit={() => setActiveModal('deposit')}
+                        onWithdraw={() => setActiveModal('withdraw')}
+                        onMint={() => setActiveModal('mint')}
+                        onRepay={() => setActiveModal('repay')}
                     />
                     <VaultHistory />
                 </>
             ) : (
                 <OpenVaultCard onOpen={() => console.log('Open Vault')} />
+            )}
+
+            {activeModal && (
+                <VaultActionModal
+                    type={activeModal}
+                    open={!!activeModal}
+                    onOpenChange={(open) => !open && setActiveModal(null)}
+                    maxAmount={getMaxAmount()}
+                    currentRatio={mockVaultData.collateralRatio}
+                    onSubmit={handleSubmit}
+                />
             )}
         </div>
     )

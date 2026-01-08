@@ -5,9 +5,10 @@ import { Vault, ArrowRight } from 'lucide-react'
 
 interface OpenVaultCardProps {
     onOpen?: () => void
+    isLoading?: boolean
 }
 
-export function OpenVaultCard({ onOpen }: OpenVaultCardProps) {
+export function OpenVaultCard({ onOpen, isLoading }: OpenVaultCardProps) {
     return (
         <div className="rounded-2xl border bg-gradient-to-br from-muted/30 to-muted/60 p-8 md:p-12">
             <div className="max-w-lg">
@@ -41,9 +42,9 @@ export function OpenVaultCard({ onOpen }: OpenVaultCardProps) {
                     </div>
                 </div>
 
-                <Button onClick={onOpen} size="lg" className="gap-2">
-                    Open Vault
-                    <ArrowRight className="size-4" />
+                <Button onClick={onOpen} size="lg" className="gap-2" disabled={isLoading}>
+                    {isLoading ? 'Opening Vault...' : 'Open Vault'}
+                    {!isLoading && <ArrowRight className="size-4" />}
                 </Button>
             </div>
         </div>

@@ -53,7 +53,10 @@ const mockLiquidations: Liquidation[] = [
     },
 ]
 
-export function LiquidationHistory({ liquidations = mockLiquidations, isLoading }: LiquidationHistoryProps) {
+export function LiquidationHistory({
+    liquidations = mockLiquidations,
+    isLoading,
+}: LiquidationHistoryProps) {
     if (isLoading) {
         return (
             <div className="rounded-2xl bg-muted/50 p-6">

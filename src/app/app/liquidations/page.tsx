@@ -5,14 +5,35 @@ import { LiquidationStats } from '@/components/liquidations/liquidation-stats'
 import { LiquidatableVaultList, type LiquidatableVault } from '@/components/liquidations/liquidatable-vault-list'
 import { LiquidateModal } from '@/components/liquidations/liquidate-modal'
 import { LiquidationHistory } from '@/components/liquidations/liquidation-history'
+import { useLiquidations } from '@/hooks/use-liquidations'
+import { parseCusdInput } from '@/lib/casper/abi'
 
 export default function LiquidationsPage() {
     const [selectedVault, setSelectedVault] = useState<LiquidatableVault | null>(null)
 
+    const {
+        liquidatableVaults,
+        liquidatableCount,
+        isLoading,
+        liquidate,
+    } = useLiquidations()
+
+    // Calculate stats from liquidatable vaults
+    const totalDebtAtRisk = liquidatableVaults.reduce((sum, v) => {
+        const debt = parseFloat(v.debt.replace(/[^0-9.]/g, '')) || 0
+        return sum + debt
+    }, 0)
+
+    const avgRatio = liquidatableCount > 0
+        ? Math.round(liquidatableVaults.reduce((sum, v) => sum + v.collateralRatio, 0) / liquidatableCount)
+        : 0
+
     const handleLiquidate = async (vault: LiquidatableVault, amount: string) => {
-        // Simulate transaction delay
-        await new Promise(resolve => setTimeout(resolve, 2000))
-        console.log(`Liquidating ${vault.owner} for ${amount} cUSD`)
+        await liquidate.mutateAsync({
+            vaultOwner: vault.owner,
+            repayAmount: parseCusdInput(amount),
+        })
+        setSelectedVault(null)
     }
 
     return (
@@ -24,11 +45,20 @@ export default function LiquidationsPage() {
                 </p>
             </div>
 
-            <LiquidationStats />
+            <LiquidationStats
+                totalLiquidatable={liquidatableCount}
+                totalDebtAtRisk={totalDebtAtRisk.toLocaleString()}
+                avgRatio={avgRatio}
+                isLoading={isLoading}
+            />
 
             <div>
                 <h2 className="text-lg font-medium mb-4">Liquidatable Vaults</h2>
-                <LiquidatableVaultList onLiquidate={setSelectedVault} />
+                <LiquidatableVaultList
+                    vaults={liquidatableVaults}
+                    isLoading={isLoading}
+                    onLiquidate={setSelectedVault}
+                />
             </div>
 
             <div>

@@ -5,42 +5,133 @@ import { VaultCard } from '@/components/vault/vault-card'
 import { OpenVaultCard } from '@/components/vault/open-vault-card'
 import { VaultHistory } from '@/components/vault/vault-history'
 import { VaultActionModal } from '@/components/vault/vault-action-modal'
-
-// Mock data - toggle hasVault to see different states
-const mockVaultData = {
-    collateral: '250,000 CSPR',
-    collateralUsd: '5,850',
-    debt: '2,500',
-    availableToMint: '940',
-    availableToWithdraw: '35,000',
-    collateralRatio: 234,
-}
+import { useVault } from '@/hooks/use-vault'
+import { useOracle } from '@/hooks/use-oracle'
+import { useWallet } from '@/hooks/use-wallet'
+import { formatCspr, formatCusd, parseCsprInput, parseCusdInput } from '@/lib/casper/abi'
+import { DECIMALS } from '@/lib/casper/types'
+import { Skeleton } from '@/components/ui/skeleton'
 
 type ModalType = 'deposit' | 'withdraw' | 'mint' | 'repay' | null
 
 export default function VaultPage() {
-    const [hasVault] = useState(true) // Toggle to test OpenVaultCard
     const [activeModal, setActiveModal] = useState<ModalType>(null)
+    const { isConnected } = useWallet()
+
+    const {
+        vault,
+        collateralRatio,
+        maxMintable,
+        cusdBalance,
+        hasVault,
+        isLoading,
+        openVault,
+        deposit,
+        withdraw,
+        mint,
+        repay,
+    } = useVault()
+
+    const { priceUsd } = useOracle()
+
+    if (!isConnected) {
+        return (
+            <div className="space-y-8">
+                <div>
+                    <h1 className="text-3xl font-medium">Vault</h1>
+                    <p className="mt-2 text-muted-foreground">
+                        Connect your wallet to manage your vault
+                    </p>
+                </div>
+                <div className="rounded-2xl bg-muted/50 p-12 text-center">
+                    <p className="text-muted-foreground">
+                        Please connect your wallet to view and manage your vault.
+                    </p>
+                </div>
+            </div>
+        )
+    }
+
+    if (isLoading) {
+        return (
+            <div className="space-y-8">
+                <div>
+                    <h1 className="text-3xl font-medium">Vault</h1>
+                    <p className="mt-2 text-muted-foreground">
+                        Manage your collateral and cUSD debt
+                    </p>
+                </div>
+                <div className="space-y-6">
+                    <Skeleton className="h-48 w-full rounded-2xl" />
+                    <div className="grid gap-6 md:grid-cols-2">
+                        <Skeleton className="h-64 w-full rounded-2xl" />
+                        <Skeleton className="h-64 w-full rounded-2xl" />
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    // Calculate values for display
+    const collateralCspr = vault ? formatCspr(vault.collateral) : '0'
+    const collateralUsd = vault && priceUsd
+        ? (Number(vault.collateral) / 10 ** DECIMALS.CSPR * priceUsd).toFixed(2)
+        : '0'
+    const debtCusd = vault ? formatCusd(vault.debt) : '0'
+    const availableToMint = maxMintable ? formatCusd(maxMintable) : '0'
+
+    // Calculate max withdrawable (simplified - full collateral if no debt)
+    const maxWithdrawable = vault
+        ? vault.debt === BigInt(0)
+            ? vault.collateral
+            : BigInt(0) // TODO: Calculate based on MCR
+        : BigInt(0)
+    const availableToWithdraw = formatCspr(maxWithdrawable)
+
+    const vaultData = {
+        collateral: `${collateralCspr} CSPR`,
+        collateralUsd,
+        debt: debtCusd,
+        availableToMint,
+        availableToWithdraw,
+        collateralRatio: collateralRatio ?? 0,
+    }
 
     const getMaxAmount = () => {
         switch (activeModal) {
             case 'deposit':
-                return '100,000' // Mock wallet balance
+                return '1000000' // TODO: Get wallet CSPR balance
             case 'withdraw':
-                return mockVaultData.availableToWithdraw
+                return availableToWithdraw
             case 'mint':
-                return mockVaultData.availableToMint
+                return availableToMint
             case 'repay':
-                return '3,000' // Mock cUSD balance
+                return cusdBalance ? formatCusd(cusdBalance) : '0'
             default:
                 return '0'
         }
     }
 
     const handleSubmit = async (amount: string) => {
-        // Simulate transaction delay
-        await new Promise(resolve => setTimeout(resolve, 2000))
-        console.log(`${activeModal}: ${amount}`)
+        switch (activeModal) {
+            case 'deposit':
+                await deposit.mutateAsync(parseCsprInput(amount))
+                break
+            case 'withdraw':
+                await withdraw.mutateAsync(parseCsprInput(amount))
+                break
+            case 'mint':
+                await mint.mutateAsync(parseCusdInput(amount))
+                break
+            case 'repay':
+                await repay.mutateAsync(parseCusdInput(amount))
+                break
+        }
+        setActiveModal(null)
+    }
+
+    const handleOpenVault = async () => {
+        await openVault.mutateAsync()
     }
 
     return (
@@ -55,7 +146,7 @@ export default function VaultPage() {
             {hasVault ? (
                 <>
                     <VaultCard
-                        data={mockVaultData}
+                        data={vaultData}
                         onDeposit={() => setActiveModal('deposit')}
                         onWithdraw={() => setActiveModal('withdraw')}
                         onMint={() => setActiveModal('mint')}
@@ -64,7 +155,10 @@ export default function VaultPage() {
                     <VaultHistory />
                 </>
             ) : (
-                <OpenVaultCard onOpen={() => console.log('Open Vault')} />
+                <OpenVaultCard
+                    onOpen={handleOpenVault}
+                    isLoading={openVault.isPending}
+                />
             )}
 
             {activeModal && (
@@ -73,7 +167,7 @@ export default function VaultPage() {
                     open={!!activeModal}
                     onOpenChange={(open) => !open && setActiveModal(null)}
                     maxAmount={getMaxAmount()}
-                    currentRatio={mockVaultData.collateralRatio}
+                    currentRatio={vaultData.collateralRatio}
                     onSubmit={handleSubmit}
                 />
             )}

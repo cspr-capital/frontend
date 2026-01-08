@@ -1,18 +1,34 @@
 'use client'
 
 import { AlertTriangle, Zap, TrendingUp } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface LiquidationStatsProps {
     totalLiquidatable?: number
     totalDebtAtRisk?: string
     avgRatio?: number
+    isLoading?: boolean
 }
 
 export function LiquidationStats({
-    totalLiquidatable = 3,
-    totalDebtAtRisk = '4,150',
-    avgRatio = 139,
+    totalLiquidatable = 0,
+    totalDebtAtRisk = '0',
+    avgRatio = 0,
+    isLoading,
 }: LiquidationStatsProps) {
+    if (isLoading) {
+        return (
+            <div className="grid gap-4 md:grid-cols-3">
+                {[...Array(3)].map((_, i) => (
+                    <div key={i} className="rounded-2xl bg-muted/50 p-6">
+                        <Skeleton className="h-4 w-24 mb-4" />
+                        <Skeleton className="h-8 w-16" />
+                    </div>
+                ))}
+            </div>
+        )
+    }
+
     return (
         <div className="grid gap-4 md:grid-cols-3">
             <div className="rounded-2xl bg-muted/50 p-6">

@@ -1,9 +1,11 @@
-import { HttpHandler, CasperServiceByJsonRPC } from 'casper-js-sdk'
+import { RpcClient, HttpHandler } from "casper-js-sdk";
 
-const CASPER_NODE_URL = process.env.NEXT_PUBLIC_CASPER_NODE_URL || 'https://rpc.mainnet.casperlabs.io/rpc'
+const CASPER_NODE_URL =
+  process.env.NEXT_PUBLIC_CASPER_NODE_URL ||
+  "https://rpc.mainnet.casperlabs.io/rpc";
 
-export const casperService = new CasperServiceByJsonRPC(
-    new HttpHandler(CASPER_NODE_URL)
-)
+const httpHandler = new HttpHandler(CASPER_NODE_URL);
+export const rpcClient = new RpcClient(httpHandler);
 
-export const NETWORK_NAME = process.env.NEXT_PUBLIC_CASPER_NETWORK || 'casper'
+export const NETWORK_NAME =
+  process.env.NEXT_PUBLIC_CASPER_NETWORK || "casper";

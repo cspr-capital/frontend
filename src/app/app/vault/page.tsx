@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { VaultCard } from '@/components/vault/vault-card'
 import { OpenVaultCard } from '@/components/vault/open-vault-card'
 import { VaultHistory } from '@/components/vault/vault-history'
@@ -8,6 +8,7 @@ import { VaultActionModal } from '@/components/vault/vault-action-modal'
 import { useVault } from '@/hooks/use-vault'
 import { useOracle } from '@/hooks/use-oracle'
 import { useWallet } from '@/hooks/use-wallet'
+import { useUserTransactions } from '@/hooks/use-events'
 import { formatCspr, formatCusd, parseCsprInput, parseCusdInput } from '@/lib/casper/abi'
 import { DECIMALS } from '@/lib/casper/types'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -16,13 +17,14 @@ type ModalType = 'deposit' | 'withdraw' | 'mint' | 'repay' | null
 
 export default function VaultPage() {
     const [activeModal, setActiveModal] = useState<ModalType>(null)
-    const { isConnected } = useWallet()
+    const { isConnected, publicKey } = useWallet()
 
     const {
         vault,
         collateralRatio,
         maxMintable,
         cusdBalance,
+        csprBalance,
         hasVault,
         isLoading,
         openVault,
@@ -30,9 +32,18 @@ export default function VaultPage() {
         withdraw,
         mint,
         repay,
+        refetch,
     } = useVault()
 
-    const { priceUsd } = useOracle()
+    const { priceUsd, refetch: refetchOracle } = useOracle()
+    const { transactions, isLoading: txLoading, refetch: refetchTx } = useUserTransactions(publicKey)
+
+    // Refetch data when page becomes active
+    useEffect(() => {
+        refetch()
+        refetchOracle?.()
+        refetchTx?.()
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
     if (!isConnected) {
         return (
@@ -100,34 +111,50 @@ export default function VaultPage() {
     const getMaxAmount = () => {
         switch (activeModal) {
             case 'deposit':
-                return '1000000' // TODO: Get wallet CSPR balance
+                return csprBalance ? formatCspr(csprBalance) : '0'
             case 'withdraw':
                 return availableToWithdraw
             case 'mint':
                 return availableToMint
             case 'repay':
-                return cusdBalance ? formatCusd(cusdBalance) : '0'
+                // Max repay is the minimum of your balance and your debt
+                if (!cusdBalance || !vault) return '0'
+                const maxRepay = cusdBalance < vault.debt ? cusdBalance : vault.debt
+                return formatCusd(maxRepay)
             default:
                 return '0'
         }
     }
 
-    const handleSubmit = async (amount: string) => {
+    // For repay, show balance but use min(balance, debt) as max
+    const getDisplayAmount = () => {
+        if (activeModal === 'repay') {
+            return cusdBalance ? formatCusd(cusdBalance) : '0'
+        }
+        return undefined // Use maxAmount for display
+    }
+
+    const handleSubmit = async (amount: string): Promise<string> => {
+        let result
         switch (activeModal) {
             case 'deposit':
-                await deposit.mutateAsync(parseCsprInput(amount))
+                result = await deposit.mutateAsync(parseCsprInput(amount))
                 break
             case 'withdraw':
-                await withdraw.mutateAsync(parseCsprInput(amount))
+                result = await withdraw.mutateAsync(parseCsprInput(amount))
                 break
             case 'mint':
-                await mint.mutateAsync(parseCusdInput(amount))
+                result = await mint.mutateAsync(parseCusdInput(amount))
                 break
             case 'repay':
-                await repay.mutateAsync(parseCusdInput(amount))
+                result = await repay.mutateAsync(parseCusdInput(amount))
                 break
         }
-        setActiveModal(null)
+        // Return transaction hash
+        const txHash = result?.transactionHash
+        if (typeof txHash === 'string') return txHash
+        if (txHash?.toHex) return txHash.toHex()
+        return String(txHash || '')
     }
 
     const handleOpenVault = async () => {
@@ -152,7 +179,7 @@ export default function VaultPage() {
                         onMint={() => setActiveModal('mint')}
                         onRepay={() => setActiveModal('repay')}
                     />
-                    <VaultHistory />
+                    <VaultHistory transactions={transactions} isLoading={txLoading} />
                 </>
             ) : (
                 <OpenVaultCard
@@ -165,9 +192,19 @@ export default function VaultPage() {
                 <VaultActionModal
                     type={activeModal}
                     open={!!activeModal}
-                    onOpenChange={(open) => !open && setActiveModal(null)}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setActiveModal(null)
+                            // Refetch data after closing modal
+                            refetch()
+                            refetchTx?.()
+                        }
+                    }}
                     maxAmount={getMaxAmount()}
-                    currentRatio={vaultData.collateralRatio}
+                    displayAmount={getDisplayAmount()}
+                    currentRatio={collateralRatio}
+                    collateralValue={parseFloat(collateralUsd)}
+                    debtValue={parseFloat(debtCusd)}
                     onSubmit={handleSubmit}
                 />
             )}

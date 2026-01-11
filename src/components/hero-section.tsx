@@ -51,7 +51,7 @@ export default function HeroSection() {
                             </div>
                             <Image
                                 className="-z-10 order-first ml-auto h-56 w-full object-cover invert sm:h-96 lg:absolute lg:inset-0 lg:-right-20 lg:-top-96 lg:order-last lg:h-max lg:w-2/3 lg:object-contain dark:invert-0 dark:mix-blend-lighten"
-                                src="/abstract-bg.webp"
+                                src="/abstract-bg-red.webp"
                                 alt="Abstract Background"
                                 height="4000"
                                 width="3000"

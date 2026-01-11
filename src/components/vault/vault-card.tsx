@@ -26,7 +26,7 @@ export function VaultCard({ data, onDeposit, onWithdraw, onMint, onRepay }: Vaul
         <div className="space-y-6">
             {/* Health Section - Full Width */}
             <div className="rounded-2xl bg-muted/50 p-6">
-                <HealthGauge ratio={data.collateralRatio} />
+                <HealthGauge ratio={data.collateralRatio / 100} />
             </div>
 
             {/* Collateral & Debt - Two Columns */}

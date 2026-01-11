@@ -1,7 +1,9 @@
 'use client'
 
 import { Skeleton } from '@/components/ui/skeleton'
-import { ArrowUpRight, Flame } from 'lucide-react'
+import { ArrowUpRight, Flame, ExternalLink } from 'lucide-react'
+
+const VAULT_MANAGER_HASH = process.env.NEXT_PUBLIC_VAULT_MANAGER_HASH || ""
 
 interface MintEvent {
     id: string
@@ -24,21 +26,7 @@ interface RecentActivityProps {
     isLoading?: boolean
 }
 
-// Mock data for development
-const mockMints: MintEvent[] = [
-    { id: '1', address: '0x1a2b...3c4d', amount: '5,000 cUSD', timestamp: '5 min ago' },
-    { id: '2', address: '0x5e6f...7g8h', amount: '12,500 cUSD', timestamp: '18 min ago' },
-    { id: '3', address: '0x9i0j...1k2l', amount: '2,000 cUSD', timestamp: '1 hour ago' },
-    { id: '4', address: '0x3m4n...5o6p', amount: '8,750 cUSD', timestamp: '2 hours ago' },
-]
-
-const mockLiquidations: LiquidationEvent[] = [
-    { id: '1', address: '0xab12...cd34', collateralSeized: '50,000 CSPR', debtRepaid: '1,000 cUSD', timestamp: '2 hours ago' },
-    { id: '2', address: '0xef56...gh78', collateralSeized: '125,000 CSPR', debtRepaid: '2,500 cUSD', timestamp: '5 hours ago' },
-    { id: '3', address: '0xij90...kl12', collateralSeized: '75,000 CSPR', debtRepaid: '1,500 cUSD', timestamp: '1 day ago' },
-]
-
-export function RecentActivity({ mints = mockMints, liquidations = mockLiquidations, isLoading }: RecentActivityProps) {
+export function RecentActivity({ mints = [], liquidations = [], isLoading }: RecentActivityProps) {
     return (
         <div className="grid gap-6 lg:grid-cols-2">
             {/* Recent Mints */}
@@ -48,9 +36,15 @@ export function RecentActivity({ mints = mockMints, liquidations = mockLiquidati
                         <ArrowUpRight className="size-5 text-green-500" />
                         <h3 className="font-medium">Recent Mints</h3>
                     </div>
-                    <button className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    <a
+                        href={`https://cspr.live/contract/${VAULT_MANAGER_HASH}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
+                    >
                         View All
-                    </button>
+                        <ExternalLink className="size-3" />
+                    </a>
                 </div>
                 {isLoading ? (
                     <div className="space-y-3">
@@ -58,6 +52,8 @@ export function RecentActivity({ mints = mockMints, liquidations = mockLiquidati
                             <Skeleton key={i} className="h-12 w-full" />
                         ))}
                     </div>
+                ) : mints.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-8 text-center">No recent mints</p>
                 ) : (
                     <div className="space-y-1">
                         {mints.map((mint) => (
@@ -80,9 +76,15 @@ export function RecentActivity({ mints = mockMints, liquidations = mockLiquidati
                         <Flame className="size-5 text-orange-500" />
                         <h3 className="font-medium">Recent Liquidations</h3>
                     </div>
-                    <button className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    <a
+                        href={`https://cspr.live/contract/${VAULT_MANAGER_HASH}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
+                    >
                         View All
-                    </button>
+                        <ExternalLink className="size-3" />
+                    </a>
                 </div>
                 {isLoading ? (
                     <div className="space-y-3">

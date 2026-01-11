@@ -1,11 +1,13 @@
 'use client'
 
+import { useEffect } from 'react'
 import { SystemStats } from '@/components/dashboard/system-stats'
 import { PriceFeed } from '@/components/dashboard/price-feed'
 import { ProtocolParams } from '@/components/dashboard/protocol-params'
 import { RecentActivity } from '@/components/dashboard/recent-activity'
 import { useSystemStats } from '@/hooks/use-system-stats'
 import { useOracle } from '@/hooks/use-oracle'
+import { useEvents } from '@/hooks/use-events'
 
 export default function DashboardPage() {
     const {
@@ -15,15 +17,31 @@ export default function DashboardPage() {
         formattedMcr,
         formattedLr,
         formattedBonus,
-        isLoading: statsLoading
+        isLoading: statsLoading,
+        refetchAll: refetchStats
     } = useSystemStats()
 
     const {
         priceUsd,
         lastUpdated,
         isFresh,
-        isLoading: priceLoading
+        isLoading: priceLoading,
+        refetch: refetchOracle
     } = useOracle()
+
+    const {
+        mints,
+        liquidations,
+        isLoading: eventsLoading,
+        refetch: refetchEvents
+    } = useEvents()
+
+    // Refetch data when page becomes active
+    useEffect(() => {
+        refetchStats?.()
+        refetchOracle?.()
+        refetchEvents?.()
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
     const systemStatsData = {
         totalSupply: formattedTotalSupply,
@@ -32,7 +50,7 @@ export default function DashboardPage() {
     }
 
     const priceData = {
-        price: priceUsd?.toFixed(4) ?? '0.00',
+        price: priceUsd?.toFixed(6) ?? '0.00',
         lastUpdate: lastUpdated ? formatTimeAgo(lastUpdated) : '—',
         isFresh,
     }
@@ -60,7 +78,11 @@ export default function DashboardPage() {
                 <ProtocolParams data={protocolParamsData} isLoading={statsLoading} />
             </div>
 
-            <RecentActivity />
+            <RecentActivity
+                mints={mints}
+                liquidations={liquidations}
+                isLoading={eventsLoading}
+            />
         </div>
     )
 }

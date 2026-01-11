@@ -1,11 +1,14 @@
 'use client'
 
 import { QueryProvider } from './query-provider'
+import { ContractProvider } from './contract-provider'
 
 export function Providers({ children }: { children: React.ReactNode }) {
     return (
         <QueryProvider>
-            {children}
+            <ContractProvider>
+                {children}
+            </ContractProvider>
         </QueryProvider>
     )
 }

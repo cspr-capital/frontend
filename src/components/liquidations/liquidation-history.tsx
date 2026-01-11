@@ -20,41 +20,8 @@ interface LiquidationHistoryProps {
     isLoading?: boolean
 }
 
-const mockLiquidations: Liquidation[] = [
-    {
-        id: '1',
-        vaultOwner: '0x3m4n...5o6p',
-        liquidator: '0xab12...cd34',
-        debtRepaid: '1,500 cUSD',
-        collateralSeized: '70,500 CSPR',
-        profit: '165 CSPR',
-        timestamp: '3 hours ago',
-        hash: '0x7a8b...9c0d',
-    },
-    {
-        id: '2',
-        vaultOwner: '0xef56...gh78',
-        liquidator: '0x1234...5678',
-        debtRepaid: '800 cUSD',
-        collateralSeized: '37,600 CSPR',
-        profit: '88 CSPR',
-        timestamp: '1 day ago',
-        hash: '0x2e3f...4g5h',
-    },
-    {
-        id: '3',
-        vaultOwner: '0x9i0j...1k2l',
-        liquidator: '0xab12...cd34',
-        debtRepaid: '2,200 cUSD',
-        collateralSeized: '103,400 CSPR',
-        profit: '242 CSPR',
-        timestamp: '2 days ago',
-        hash: '0x6i7j...8k9l',
-    },
-]
-
 export function LiquidationHistory({
-    liquidations = mockLiquidations,
+    liquidations = [],
     isLoading,
 }: LiquidationHistoryProps) {
     if (isLoading) {

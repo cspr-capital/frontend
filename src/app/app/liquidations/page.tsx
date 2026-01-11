@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { LiquidationStats } from '@/components/liquidations/liquidation-stats'
 import { LiquidatableVaultList, type LiquidatableVault } from '@/components/liquidations/liquidatable-vault-list'
 import { LiquidateModal } from '@/components/liquidations/liquidate-modal'
@@ -16,7 +16,13 @@ export default function LiquidationsPage() {
         liquidatableCount,
         isLoading,
         liquidate,
+        refetch,
     } = useLiquidations()
+
+    // Refetch data when page becomes active
+    useEffect(() => {
+        refetch()
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
     // Calculate stats from liquidatable vaults
     const totalDebtAtRisk = liquidatableVaults.reduce((sum, v) => {

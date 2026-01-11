@@ -45,6 +45,12 @@ export interface ContractAddresses {
   oracleFeed: string;
   liquidationModule: string;
   governance: string;
+  // Package hashes (needed for payable calls via proxy_caller)
+  vaultManagerPackage?: string;
+  cusdTokenPackage?: string;
+  oracleFeedPackage?: string;
+  liquidationModulePackage?: string;
+  governancePackage?: string;
 }
 
 export const ENTRY_POINTS = {
@@ -92,6 +98,7 @@ export const ENTRY_POINTS = {
 } as const;
 
 export const STORAGE_KEYS = {
+  // VaultManager storage
   VAULTS: "vaults",
   TOTAL_COLLATERAL: "total_collateral",
   TOTAL_DEBT: "total_debt",
@@ -99,21 +106,28 @@ export const STORAGE_KEYS = {
   PRICE: "price",
   PRICE_TIMESTAMP: "price_timestamp",
   MCR_BPS: "mcr_bps",
+  LR_BPS: "lr_bps",
   DEBT_FLOOR: "debt_floor",
   DEBT_CEILING: "debt_ceiling",
+  MAX_PRICE_STALENESS: "max_price_staleness",
+  // CusdToken storage
   BALANCES: "balances",
   TOTAL_SUPPLY: "total_supply",
+  // OracleFeed storage
   LATEST_ROUND: "latest_round",
+  // Governance storage
   PARAMS: "params",
   SYSTEM_PAUSED: "system_paused",
   MINT_PAUSED: "mint_paused",
   LIQUIDATIONS_PAUSED: "liquidations_paused",
+  // LiquidationModule storage
+  LIQUIDATION_BONUS_BPS: "liquidation_bonus_bps",
 } as const;
 
 export const DECIMALS = {
   CSPR: 9,
   CUSD: 18,
-  PRICE: 8,
+  PRICE: 9, 
   BPS: 4,
 } as const;
 

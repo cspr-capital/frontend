@@ -10,17 +10,21 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
-import { ArrowUpRight, ArrowDownRight, Plus, Minus, Loader2 } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, Plus, Minus, Loader2, CheckCircle2, ExternalLink } from 'lucide-react'
 
 type ActionType = 'deposit' | 'withdraw' | 'mint' | 'repay'
+type ModalState = 'input' | 'pending' | 'success' | 'error'
 
 interface VaultActionModalProps {
     type: ActionType
     open: boolean
     onOpenChange: (open: boolean) => void
     maxAmount?: string
-    currentRatio?: number
-    onSubmit?: (amount: string) => Promise<void>
+    displayAmount?: string // For showing balance/available separately from max
+    currentRatio?: number | null
+    collateralValue?: number // USD value of collateral
+    debtValue?: number // cUSD debt amount
+    onSubmit?: (amount: string) => Promise<string> // Returns tx hash
 }
 
 const actionConfig: Record<ActionType, {
@@ -75,11 +79,18 @@ export function VaultActionModal({
     open,
     onOpenChange,
     maxAmount = '0',
-    currentRatio = 200,
+    displayAmount,
+    currentRatio,
+    collateralValue = 0,
+    debtValue = 0,
     onSubmit,
 }: VaultActionModalProps) {
+    // Use displayAmount for showing balance/available, fall back to maxAmount
+    const shownAmount = displayAmount ?? maxAmount
     const [amount, setAmount] = useState('')
-    const [isLoading, setIsLoading] = useState(false)
+    const [modalState, setModalState] = useState<ModalState>('input')
+    const [txHash, setTxHash] = useState<string | null>(null)
+    const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
     const config = actionConfig[type]
     const Icon = config.icon
@@ -90,45 +101,151 @@ export function VaultActionModal({
 
     const handleSubmit = async () => {
         if (!amount || !onSubmit) return
-        setIsLoading(true)
+        setModalState('pending')
+        setErrorMsg(null)
         try {
-            await onSubmit(amount)
-            setAmount('')
-            onOpenChange(false)
-        } finally {
-            setIsLoading(false)
+            const hash = await onSubmit(amount)
+            setTxHash(hash)
+            setModalState('success')
+        } catch (err) {
+            setErrorMsg(err instanceof Error ? err.message : 'Transaction failed')
+            setModalState('error')
         }
     }
 
-    const handleClose = (open: boolean) => {
-        if (!open) setAmount('')
-        onOpenChange(open)
+    const handleClose = (openState: boolean) => {
+        if (!openState) {
+            // Reset state when closing
+            setAmount('')
+            setModalState('input')
+            setTxHash(null)
+            setErrorMsg(null)
+        }
+        onOpenChange(openState)
     }
 
-    // Calculate projected ratio based on action
-    const getProjectedRatio = () => {
-        const numAmount = parseFloat(amount) || 0
-        if (numAmount === 0) return currentRatio
+    const handleDone = () => {
+        handleClose(false)
+    }
 
-        // Simplified calculation for display purposes
-        // Real implementation would use actual collateral/debt values
+    // Calculate projected ratio based on action type and real values
+    // Ratio = (collateralValue / debt) * 100
+    const getProjectedRatio = (): number | null => {
+        const numAmount = parseFloat(amount) || 0
+        if (numAmount === 0) return currentRatio ?? null
+
+        let projectedCollateral = collateralValue
+        let projectedDebt = debtValue
+
         switch (type) {
             case 'deposit':
-                return currentRatio + (numAmount * 0.01)
+                // Adding collateral increases ratio (need price to convert CSPR to USD)
+                // For now, assume the collateralValue prop is already in USD
+                projectedCollateral = collateralValue + numAmount
+                break
             case 'withdraw':
-                return Math.max(0, currentRatio - (numAmount * 0.01))
+                projectedCollateral = Math.max(0, collateralValue - numAmount)
+                break
             case 'mint':
-                return Math.max(0, currentRatio - (numAmount * 0.05))
+                // Minting increases debt, which decreases ratio
+                projectedDebt = debtValue + numAmount
+                break
             case 'repay':
-                return currentRatio + (numAmount * 0.05)
-            default:
-                return currentRatio
+                projectedDebt = Math.max(0, debtValue - numAmount)
+                break
         }
+
+        // If no debt after action, ratio is infinite
+        if (projectedDebt === 0) return null
+
+        // Ratio in percentage: (collateral / debt) * 100
+        return (projectedCollateral / projectedDebt) * 100
     }
 
     const projectedRatio = getProjectedRatio()
-    const isRatioSafe = projectedRatio >= 170
 
+    // Format ratio for display
+    const formatRatio = (ratio: number | null | undefined): string => {
+        if (ratio === null || ratio === undefined) return '∞'
+        if (ratio > 10000) return '∞'
+        return `${ratio.toFixed(0)}%`
+    }
+
+    const isRatioSafe = projectedRatio === null || projectedRatio >= 170
+
+    // Success state content
+    if (modalState === 'success') {
+        return (
+            <Dialog open={open} onOpenChange={handleClose}>
+                <DialogContent className="sm:max-w-md">
+                    <div className="flex flex-col items-center justify-center py-8 space-y-4">
+                        <div className="flex size-16 items-center justify-center rounded-full bg-green-500/10">
+                            <CheckCircle2 className="size-8 text-green-500" />
+                        </div>
+                        <h3 className="text-xl font-semibold">Transaction Submitted</h3>
+                        <p className="text-sm text-muted-foreground text-center">
+                            Your {config.title.toLowerCase()} transaction has been submitted to the network.
+                        </p>
+                        {txHash && (
+                            <a
+                                href={`https://cspr.live/deploy/${txHash}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 text-sm text-blue-500 hover:text-blue-600 transition-colors"
+                            >
+                                View on Explorer
+                                <ExternalLink className="size-4" />
+                            </a>
+                        )}
+                        <Button onClick={handleDone} className="w-full mt-4">
+                            Done
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        )
+    }
+
+    // Pending state content
+    if (modalState === 'pending') {
+        return (
+            <Dialog open={open} onOpenChange={() => {}}>
+                <DialogContent className="sm:max-w-md">
+                    <div className="flex flex-col items-center justify-center py-8 space-y-4">
+                        <Loader2 className="size-12 text-primary animate-spin" />
+                        <h3 className="text-xl font-semibold">Processing Transaction</h3>
+                        <p className="text-sm text-muted-foreground text-center">
+                            Please confirm in your wallet and wait for the transaction to be submitted...
+                        </p>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        )
+    }
+
+    // Error state content
+    if (modalState === 'error') {
+        return (
+            <Dialog open={open} onOpenChange={handleClose}>
+                <DialogContent className="sm:max-w-md">
+                    <div className="flex flex-col items-center justify-center py-8 space-y-4">
+                        <div className="flex size-16 items-center justify-center rounded-full bg-red-500/10">
+                            <Minus className="size-8 text-red-500" />
+                        </div>
+                        <h3 className="text-xl font-semibold">Transaction Failed</h3>
+                        <p className="text-sm text-muted-foreground text-center">
+                            {errorMsg || 'Something went wrong'}
+                        </p>
+                        <Button onClick={() => setModalState('input')} variant="outline" className="w-full">
+                            Try Again
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        )
+    }
+
+    // Input state content (default)
     return (
         <Dialog open={open} onOpenChange={handleClose}>
             <DialogContent className="sm:max-w-md">
@@ -150,7 +267,7 @@ export function VaultActionModal({
                                 onClick={handleMax}
                                 className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                             >
-                                {config.maxLabel}: <span className="text-foreground">{maxAmount} {config.token}</span>
+                                {config.maxLabel}: <span className="text-foreground">{shownAmount} {config.token}</span>
                                 <span className="ml-1">[use max]</span>
                             </button>
                         </div>
@@ -172,7 +289,7 @@ export function VaultActionModal({
                     <div className="rounded-xl bg-muted/50 p-4 space-y-3">
                         <div className="flex items-center justify-between text-sm">
                             <span className="text-muted-foreground">Current Ratio</span>
-                            <span className="font-medium">{currentRatio.toFixed(0)}%</span>
+                            <span className="font-medium">{formatRatio(currentRatio)}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                             <span className="text-muted-foreground">Projected Ratio</span>
@@ -180,7 +297,7 @@ export function VaultActionModal({
                                 'font-medium',
                                 isRatioSafe ? 'text-green-500' : 'text-red-500'
                             )}>
-                                {projectedRatio.toFixed(0)}%
+                                {formatRatio(projectedRatio)}
                             </span>
                         </div>
                         {!isRatioSafe && amount && (
@@ -193,17 +310,10 @@ export function VaultActionModal({
                     {/* Submit Button */}
                     <Button
                         onClick={handleSubmit}
-                        disabled={!amount || isLoading || (!isRatioSafe && (type === 'withdraw' || type === 'mint'))}
+                        disabled={!amount || (!isRatioSafe && (type === 'withdraw' || type === 'mint'))}
                         className="w-full h-12 text-base"
                     >
-                        {isLoading ? (
-                            <>
-                                <Loader2 className="size-4 mr-2 animate-spin" />
-                                Processing...
-                            </>
-                        ) : (
-                            config.buttonLabel
-                        )}
+                        {config.buttonLabel}
                     </Button>
                 </div>
             </DialogContent>

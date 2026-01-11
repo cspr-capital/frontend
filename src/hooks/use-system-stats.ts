@@ -67,15 +67,15 @@ export function useSystemStats() {
 
   const formattedMcr = paramsQuery.data
     ? formatBps(paramsQuery.data.mcrBps)
-    : "170%";
+    : "-";
 
   const formattedLr = paramsQuery.data
     ? formatBps(paramsQuery.data.lrBps)
-    : "150%";
+    : "-";
 
   const formattedBonus = paramsQuery.data
     ? formatBps(paramsQuery.data.liquidationBonusBps)
-    : "10%";
+    : "-";
 
   return {
     // Raw data

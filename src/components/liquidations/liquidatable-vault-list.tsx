@@ -21,37 +21,6 @@ interface LiquidatableVaultListProps {
     onLiquidate?: (vault: LiquidatableVault) => void
 }
 
-// Mock data
-const mockVaults: LiquidatableVault[] = [
-    {
-        owner: '0x1a2b...3c4d',
-        collateral: '45,000 CSPR',
-        collateralUsd: '1,053',
-        debt: '750 cUSD',
-        collateralRatio: 140,
-        maxLiquidatable: '750 cUSD',
-        potentialProfit: '82.50 CSPR',
-    },
-    {
-        owner: '0x5e6f...7g8h',
-        collateral: '120,000 CSPR',
-        collateralUsd: '2,808',
-        debt: '2,000 cUSD',
-        collateralRatio: 145,
-        maxLiquidatable: '2,000 cUSD',
-        potentialProfit: '220.00 CSPR',
-    },
-    {
-        owner: '0x9i0j...1k2l',
-        collateral: '80,000 CSPR',
-        collateralUsd: '1,872',
-        debt: '1,400 cUSD',
-        collateralRatio: 133,
-        maxLiquidatable: '1,400 cUSD',
-        potentialProfit: '154.00 CSPR',
-    },
-]
-
 function getRatioColor(ratio: number) {
     if (ratio < 140) return 'text-red-500'
     if (ratio < 150) return 'text-orange-500'
@@ -59,7 +28,7 @@ function getRatioColor(ratio: number) {
 }
 
 export function LiquidatableVaultList({
-    vaults = mockVaults,
+    vaults = [],
     isLoading,
     onLiquidate,
 }: LiquidatableVaultListProps) {

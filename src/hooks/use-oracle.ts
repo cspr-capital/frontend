@@ -1,11 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { queryPrice } from "@/lib/casper/contracts";
-import { PriceRound, DECIMALS } from "@/lib/casper/types";
+import { queryPrice, queryParams } from "@/lib/casper/contracts";
+import { PriceRound, GovernanceParams, DECIMALS } from "@/lib/casper/types";
 import { formatPrice } from "@/lib/casper/abi";
 
 const PRICE_QUERY_KEY = "oracle-price";
+const PARAMS_KEY = "governance-params";
 
 export function useOracle() {
   const priceQuery = useQuery({
@@ -15,6 +16,15 @@ export function useOracle() {
     },
     refetchInterval: 5000, // Refetch every 5 seconds
     staleTime: 3000,
+  });
+
+  const paramsQuery = useQuery({
+    queryKey: [PARAMS_KEY],
+    queryFn: async (): Promise<GovernanceParams | null> => {
+      return queryParams();
+    },
+    refetchInterval: 60000,
+    staleTime: 30000,
   });
 
   const priceUsd = priceQuery.data
@@ -29,8 +39,10 @@ export function useOracle() {
     ? new Date(priceQuery.data.timestamp * 1000)
     : null;
 
-  const isFresh = priceQuery.data
-    ? Date.now() / 1000 - priceQuery.data.timestamp < 3600 // 1 hour
+  // Use maxPriceStaleness from contract params
+  const maxStaleness = paramsQuery.data?.maxPriceStaleness ?? 0;
+  const isFresh = priceQuery.data && maxStaleness > 0
+    ? Date.now() / 1000 - priceQuery.data.timestamp < maxStaleness
     : false;
 
   return {
@@ -41,6 +53,7 @@ export function useOracle() {
     roundId: priceQuery.data?.roundId ?? null,
     lastUpdated,
     isFresh,
+    maxPriceStaleness: maxStaleness,
     isLoading: priceQuery.isLoading,
     isError: priceQuery.isError,
     error: priceQuery.error,

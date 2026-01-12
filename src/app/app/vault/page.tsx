@@ -91,12 +91,23 @@ export default function VaultPage() {
     const debtCusd = vault ? formatCusd(vault.debt) : '0'
     const availableToMint = maxMintable ? formatCusd(maxMintable) : '0'
 
-    // Calculate max withdrawable (simplified - full collateral if no debt)
-    const maxWithdrawable = vault
-        ? vault.debt === BigInt(0)
-            ? vault.collateral
-            : BigInt(0) // TODO: Calculate based on MCR
-        : BigInt(0)
+    // Calculate max withdrawable based on MCR (170%)
+    // minCollateralNeeded (in CSPR) = (debt * MCR) / price
+    // maxWithdrawable = collateral - minCollateralNeeded
+    const MCR = 1.7 // 170%
+    const maxWithdrawable = (() => {
+        if (!vault) return BigInt(0)
+        if (vault.debt === BigInt(0)) return vault.collateral
+        if (!priceUsd || priceUsd === 0) return BigInt(0)
+
+        const debtInUsd = Number(vault.debt) / 10 ** DECIMALS.CUSD
+        const minCollateralUsd = debtInUsd * MCR
+        const minCollateralCspr = minCollateralUsd / priceUsd
+        const minCollateralMotes = BigInt(Math.ceil(minCollateralCspr * 10 ** DECIMALS.CSPR))
+
+        if (vault.collateral <= minCollateralMotes) return BigInt(0)
+        return vault.collateral - minCollateralMotes
+    })()
     const availableToWithdraw = formatCspr(maxWithdrawable)
 
     const vaultData = {
@@ -157,8 +168,12 @@ export default function VaultPage() {
         return String(txHash || '')
     }
 
-    const handleOpenVault = async () => {
-        await openVault.mutateAsync()
+    const handleOpenVault = async (): Promise<string> => {
+        const result = await openVault.mutateAsync()
+        const txHash = result?.transactionHash
+        if (typeof txHash === 'string') return txHash
+        if (txHash?.toHex) return txHash.toHex()
+        return String(txHash || '')
     }
 
     return (
@@ -182,10 +197,7 @@ export default function VaultPage() {
                     <VaultHistory transactions={transactions} isLoading={txLoading} />
                 </>
             ) : (
-                <OpenVaultCard
-                    onOpen={handleOpenVault}
-                    isLoading={openVault.isPending}
-                />
+                <OpenVaultCard onOpen={handleOpenVault} />
             )}
 
             {activeModal && (

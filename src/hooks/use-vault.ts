@@ -206,6 +206,9 @@ export function useVault() {
     },
   });
 
+  // Show loading on initial load OR when refetching and we don't have data yet
+  const isInitialLoading = vaultQuery.isLoading || (vaultQuery.isFetching && vaultQuery.data === undefined);
+
   return {
     // Queries
     vault: vaultQuery.data,
@@ -213,10 +216,7 @@ export function useVault() {
     maxMintable: maxMintableQuery.data,
     cusdBalance: balanceQuery.data,
     csprBalance: csprBalanceQuery.data,
-    isLoading:
-      vaultQuery.isLoading ||
-      collateralRatioQuery.isLoading ||
-      maxMintableQuery.isLoading,
+    isLoading: isInitialLoading,
     isError: vaultQuery.isError,
     error: vaultQuery.error,
     hasVault: !!vaultQuery.data,

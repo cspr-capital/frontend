@@ -6,10 +6,14 @@ import Image from 'next/image'
 import { HeroHeader } from './hero-header'
 import { ConnectWallet } from '@/components/connect-wallet'
 import { useWallet } from '@/hooks/use-wallet'
-import { ArrowRight, Shield, Zap, TrendingUp, Wallet } from 'lucide-react'
+import { useSystemStats } from '@/hooks/use-system-stats'
+import { useOracle } from '@/hooks/use-oracle'
+import { ArrowRight, Shield, Zap, TrendingUp, Wallet, DollarSign, Lock, Users, Activity, CreditCard, Store, Repeat, PiggyBank } from 'lucide-react'
 
 export default function HeroSection() {
     const { isConnected } = useWallet()
+    const { formattedTotalSupply, formattedTotalCollateral, vaultCount, isLoading: statsLoading } = useSystemStats()
+    const { priceUsd, isLoading: priceLoading } = useOracle()
 
     return (
         <>
@@ -17,7 +21,7 @@ export default function HeroSection() {
             <main className="overflow-x-hidden">
                 {/* Hero Section */}
                 <section>
-                    <div className="pb-24 pt-12 md:pb-32 lg:pb-56 lg:pt-44">
+                    <div className="pb-12 pt-12 md:pb-16 lg:pb-24 lg:pt-32">
                         <div className="relative mx-auto flex max-w-6xl flex-col px-6 lg:block">
                             <div className="mx-auto max-w-lg text-center lg:ml-0 lg:w-1/2 lg:text-left">
                                 <h1 className="mt-8 max-w-2xl text-balance text-5xl font-medium md:text-6xl lg:mt-16 xl:text-7xl">
@@ -28,11 +32,11 @@ export default function HeroSection() {
                                     Deposit CSPR, mint cUSD, and unlock DeFi without selling your assets.
                                 </p>
 
-                                <div className="mt-12 flex flex-col items-center justify-center gap-2 sm:flex-row lg:justify-start">
+                                <div className="mt-12 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start">
                                     {isConnected ? (
-                                        <Button asChild size="lg" className="gap-2 px-5">
+                                        <Button asChild size="lg" className="gap-2 px-8">
                                             <Link href="/app">
-                                                <span className="text-nowrap">Open dApp</span>
+                                                <span className="text-nowrap">Launch App</span>
                                                 <ArrowRight className="size-4" />
                                             </Link>
                                         </Button>
@@ -42,8 +46,7 @@ export default function HeroSection() {
                                     <Button
                                         asChild
                                         size="lg"
-                                        variant="ghost"
-                                        className="px-5 text-base">
+                                        variant="outline">
                                         <Link href="#how-it-works">
                                             <span className="text-nowrap">Learn More</span>
                                         </Link>
@@ -58,6 +61,71 @@ export default function HeroSection() {
                                 width="3000"
                             />
                         </div>
+                    </div>
+                </section>
+
+                {/* Real-time Metrics Section */}
+                <section className="border-y border-border/50 bg-muted/20">
+                    <div className="mx-auto max-w-6xl px-6 py-8">
+                        <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
+                            <div className="text-center">
+                                <div className="flex items-center justify-center gap-2 text-muted-foreground mb-2">
+                                    <DollarSign className="size-4" />
+                                    <span className="text-sm">Total cUSD Minted</span>
+                                </div>
+                                <div className="text-2xl md:text-3xl font-medium">
+                                    {statsLoading ? (
+                                        <span className="text-muted-foreground">—</span>
+                                    ) : (
+                                        <span>${formattedTotalSupply}</span>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="text-center">
+                                <div className="flex items-center justify-center gap-2 text-muted-foreground mb-2">
+                                    <Lock className="size-4" />
+                                    <span className="text-sm">CSPR Locked</span>
+                                </div>
+                                <div className="text-2xl md:text-3xl font-medium">
+                                    {statsLoading ? (
+                                        <span className="text-muted-foreground">—</span>
+                                    ) : (
+                                        <span>{formattedTotalCollateral}</span>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="text-center">
+                                <div className="flex items-center justify-center gap-2 text-muted-foreground mb-2">
+                                    <Activity className="size-4" />
+                                    <span className="text-sm">CSPR Price</span>
+                                </div>
+                                <div className="text-2xl md:text-3xl font-medium">
+                                    {priceLoading ? (
+                                        <span className="text-muted-foreground">—</span>
+                                    ) : (
+                                        <span>${priceUsd?.toFixed(6) ?? '0.00'}</span>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="text-center">
+                                <div className="flex items-center justify-center gap-2 text-muted-foreground mb-2">
+                                    <Users className="size-4" />
+                                    <span className="text-sm">Active Vaults</span>
+                                </div>
+                                <div className="text-2xl md:text-3xl font-medium">
+                                    {statsLoading ? (
+                                        <span className="text-muted-foreground">—</span>
+                                    ) : (
+                                        <span>{vaultCount}</span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        {vaultCount > 0 && (
+                            <p className="text-center text-sm text-muted-foreground mt-6">
+                                Join {vaultCount} vault{vaultCount !== 1 ? 's' : ''} already using CSPR Capital
+                            </p>
+                        )}
                     </div>
                 </section>
 
@@ -179,6 +247,179 @@ export default function HeroSection() {
                                     Return cUSD anytime to unlock and withdraw your CSPR
                                 </p>
                             </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Use Cases Section */}
+                <section id="use-cases" className="border-t border-border/50 bg-muted/30">
+                    <div className="mx-auto max-w-6xl px-6 py-24">
+                        <div className="text-center mb-16">
+                            <h2 className="text-3xl font-medium md:text-4xl">Use Cases for cUSD</h2>
+                            <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
+                                A stable digital dollar opens up endless possibilities on Casper Network
+                            </p>
+                        </div>
+
+                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                            <Link href="/use-cases/payments" className="group rounded-2xl border border-border/50 bg-background p-6 hover:border-primary/50 hover:shadow-lg transition-all duration-300">
+                                <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 mb-4 group-hover:scale-110 transition-transform duration-300">
+                                    <CreditCard className="size-6 text-primary" />
+                                </div>
+                                <h3 className="font-medium mb-2">Payments</h3>
+                                <p className="text-sm text-muted-foreground leading-relaxed">
+                                    Accept cUSD payments on your website with our simple &quot;Pay with cUSD&quot; widget.
+                                </p>
+                                <span className="inline-flex items-center gap-1 text-sm text-primary mt-4 group-hover:gap-2 transition-all">
+                                    Learn more <ArrowRight className="size-4" />
+                                </span>
+                            </Link>
+
+                            <div className="group rounded-2xl border border-border/50 bg-background p-6 hover:border-green-500/50 transition-all duration-300">
+                                <div className="flex size-12 items-center justify-center rounded-xl bg-green-500/10 mb-4 group-hover:scale-110 transition-transform duration-300">
+                                    <Store className="size-6 text-green-500" />
+                                </div>
+                                <h3 className="font-medium mb-2">E-Commerce</h3>
+                                <p className="text-sm text-muted-foreground leading-relaxed">
+                                    Sell products and services with stable pricing. No more volatility concerns.
+                                </p>
+                            </div>
+
+                            <div className="group rounded-2xl border border-border/50 bg-background p-6 hover:border-blue-500/50 transition-all duration-300">
+                                <div className="flex size-12 items-center justify-center rounded-xl bg-blue-500/10 mb-4 group-hover:scale-110 transition-transform duration-300">
+                                    <Repeat className="size-6 text-blue-500" />
+                                </div>
+                                <h3 className="font-medium mb-2">Trading</h3>
+                                <p className="text-sm text-muted-foreground leading-relaxed">
+                                    Use cUSD as a stable quote currency for DEX trading pairs on Casper.
+                                </p>
+                            </div>
+
+                            <div className="group rounded-2xl border border-border/50 bg-background p-6 hover:border-purple-500/50 transition-all duration-300">
+                                <div className="flex size-12 items-center justify-center rounded-xl bg-purple-500/10 mb-4 group-hover:scale-110 transition-transform duration-300">
+                                    <PiggyBank className="size-6 text-purple-500" />
+                                </div>
+                                <h3 className="font-medium mb-2">Savings</h3>
+                                <p className="text-sm text-muted-foreground leading-relaxed">
+                                    Hold stable value on-chain without off-ramping to traditional finance.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="text-center mt-12">
+                            <Button asChild variant="outline" size="lg">
+                                <Link href="/use-cases">
+                                    View All Use Cases
+                                    <ArrowRight className="size-4 ml-2" />
+                                </Link>
+                            </Button>
+                        </div>
+                    </div>
+                </section>
+
+                {/* FAQ Section */}
+                <section id="faq" className="border-t border-border/50">
+                    <div className="mx-auto max-w-4xl px-6 py-24">
+                        <div className="text-center mb-16">
+                            <h2 className="text-3xl font-medium md:text-4xl">Frequently Asked Questions</h2>
+                            <p className="mt-4 text-muted-foreground">
+                                Everything you need to know about CSPR Capital
+                            </p>
+                        </div>
+
+                        <div className="space-y-3">
+                            <details className="group rounded-2xl border border-border/50 overflow-hidden">
+                                <summary className="flex cursor-pointer items-center justify-between p-6 font-medium hover:bg-muted/50 transition-colors [&::-webkit-details-marker]:hidden">
+                                    What is cUSD?
+                                    <span className="ml-4 shrink-0 transition-transform group-open:rotate-180">
+                                        <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </span>
+                                </summary>
+                                <div className="px-6 pb-6 text-muted-foreground text-sm leading-relaxed">
+                                    cUSD is a decentralized stablecoin pegged to the US Dollar. It&apos;s minted by depositing CSPR as collateral
+                                    and can be used for trading, payments, or as a stable store of value on Casper Network.
+                                </div>
+                            </details>
+
+                            <details className="group rounded-2xl border border-border/50 overflow-hidden">
+                                <summary className="flex cursor-pointer items-center justify-between p-6 font-medium hover:bg-muted/50 transition-colors [&::-webkit-details-marker]:hidden">
+                                    What is the minimum collateral ratio?
+                                    <span className="ml-4 shrink-0 transition-transform group-open:rotate-180">
+                                        <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </span>
+                                </summary>
+                                <div className="px-6 pb-6 text-muted-foreground text-sm leading-relaxed">
+                                    The minimum collateral ratio (MCR) is 170%. This means for every $100 of cUSD you want to mint,
+                                    you need at least $170 worth of CSPR as collateral. We recommend maintaining a higher ratio
+                                    to avoid liquidation during price volatility.
+                                </div>
+                            </details>
+
+                            <details className="group rounded-2xl border border-border/50 overflow-hidden">
+                                <summary className="flex cursor-pointer items-center justify-between p-6 font-medium hover:bg-muted/50 transition-colors [&::-webkit-details-marker]:hidden">
+                                    What happens if my vault gets liquidated?
+                                    <span className="ml-4 shrink-0 transition-transform group-open:rotate-180">
+                                        <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </span>
+                                </summary>
+                                <div className="px-6 pb-6 text-muted-foreground text-sm leading-relaxed">
+                                    If your collateral ratio falls below 150% (liquidation ratio), your vault becomes eligible for liquidation.
+                                    A liquidator can repay part of your debt and claim your collateral at a 10% discount.
+                                    To avoid this, monitor your vault and add collateral or repay debt when needed.
+                                </div>
+                            </details>
+
+                            <details className="group rounded-2xl border border-border/50 overflow-hidden">
+                                <summary className="flex cursor-pointer items-center justify-between p-6 font-medium hover:bg-muted/50 transition-colors [&::-webkit-details-marker]:hidden">
+                                    Are there any fees?
+                                    <span className="ml-4 shrink-0 transition-transform group-open:rotate-180">
+                                        <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </span>
+                                </summary>
+                                <div className="px-6 pb-6 text-muted-foreground text-sm leading-relaxed">
+                                    CSPR Capital currently has no stability fees or interest rates on minted cUSD.
+                                    You only pay standard Casper Network transaction fees for on-chain operations.
+                                </div>
+                            </details>
+
+                            <details className="group rounded-2xl border border-border/50 overflow-hidden">
+                                <summary className="flex cursor-pointer items-center justify-between p-6 font-medium hover:bg-muted/50 transition-colors [&::-webkit-details-marker]:hidden">
+                                    How do I get my CSPR back?
+                                    <span className="ml-4 shrink-0 transition-transform group-open:rotate-180">
+                                        <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </span>
+                                </summary>
+                                <div className="px-6 pb-6 text-muted-foreground text-sm leading-relaxed">
+                                    Simply repay your cUSD debt (fully or partially) and withdraw your collateral.
+                                    There are no lock-up periods — you can close your vault anytime by repaying all debt.
+                                </div>
+                            </details>
+
+                            <details className="group rounded-2xl border border-border/50 overflow-hidden">
+                                <summary className="flex cursor-pointer items-center justify-between p-6 font-medium hover:bg-muted/50 transition-colors [&::-webkit-details-marker]:hidden">
+                                    Is CSPR Capital audited?
+                                    <span className="ml-4 shrink-0 transition-transform group-open:rotate-180">
+                                        <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </span>
+                                </summary>
+                                <div className="px-6 pb-6 text-muted-foreground text-sm leading-relaxed">
+                                    The smart contracts are open source and available for review. We recommend users
+                                    do their own research and only deposit what they can afford to risk.
+                                    DeFi protocols carry inherent smart contract risks.
+                                </div>
+                            </details>
                         </div>
                     </div>
                 </section>

@@ -27,6 +27,12 @@ const STATE_UREFS = {
   governance: process.env.NEXT_PUBLIC_GOVERNANCE_STATE_UREF || "",
 };
 
+// CEP-18 cUSD token URefs (standard CEP-18, not Odra-style)
+const CEP18_UREFS = {
+  balances: process.env.NEXT_PUBLIC_CUSD_BALANCES_UREF || "",
+  totalSupply: process.env.NEXT_PUBLIC_CUSD_TOTAL_SUPPLY_UREF || "",
+};
+
 let contractAddresses: ContractAddresses | null = null;
 
 export function setContractAddresses(addresses: ContractAddresses): void {
@@ -491,25 +497,95 @@ export async function queryBalance(owner: PublicKey): Promise<bigint> {
   if (cached !== null) return cached;
 
   try {
-    // Query CusdToken's balances Mapping with account hash key
-    const balanceBytes = await queryOdraMappingByAddress(
-      STATE_UREFS.cusdToken,
-      CUSD_INDICES.balances,
-      accountHash
-    );
+    // Query CEP-18 balances dictionary with account hash key
+    const balanceBytes = await queryCep18Balance(accountHash);
 
     if (!balanceBytes) {
       console.log("[queryBalance] No balance found for", accountHash);
       return BigInt(0);
     }
 
-    const balance = parseU256FromHex(balanceBytes);
+    const balance = parseCep18U256(balanceBytes);
     console.log("[queryBalance] Parsed:", balance.toString());
     setCache(cacheKey, balance);
     return balance;
   } catch (error) {
     console.error("Failed to query balance:", error);
     return BigInt(0);
+  }
+}
+
+// Query CEP-18 balances dictionary
+async function queryCep18Balance(accountHashHex: string): Promise<string | null> {
+  try {
+    const balancesUref = CEP18_UREFS.balances;
+    if (!balancesUref) {
+      console.error('[queryCep18Balance] No balances URef configured');
+      return null;
+    }
+
+    // Get latest state root hash
+    const stateRootResponse = await fetch('/api/rpc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'chain_get_state_root_hash',
+        params: []
+      })
+    });
+    const stateRootResult = await stateRootResponse.json();
+    const stateRootHash = stateRootResult.result?.state_root_hash;
+
+    if (!stateRootHash) {
+      console.error('[queryCep18Balance] Failed to get state root hash');
+      return null;
+    }
+
+    // CEP-18 uses account-hash-<hex> format as dictionary key
+    const cleanHash = accountHashHex.replace(/^(account-hash-)?/, '');
+    const dictionaryKey = `account-hash-${cleanHash}`;
+
+    console.log('[queryCep18Balance] Querying with key:', dictionaryKey);
+
+    // Query dictionary using state_get_dictionary_item
+    const response = await fetch('/api/rpc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'state_get_dictionary_item',
+        params: {
+          state_root_hash: stateRootHash,
+          dictionary_identifier: {
+            URef: {
+              seed_uref: balancesUref,
+              dictionary_item_key: dictionaryKey
+            }
+          }
+        }
+      })
+    });
+
+    const result = await response.json();
+    console.log('[queryCep18Balance] Result:', result);
+
+    if (result.result?.stored_value?.CLValue?.bytes) {
+      return result.result.stored_value.CLValue.bytes;
+    }
+    if (result.error) {
+      // Not found is normal for accounts with no balance
+      if (!result.error.message?.includes('dictionary item not found') &&
+          !result.error.message?.includes('value was not found')) {
+        console.warn('[queryCep18Balance] error:', result.error);
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error('Failed to query CEP-18 balance:', error);
+    return null;
   }
 }
 
@@ -615,18 +691,15 @@ export async function queryTotalSupply(): Promise<bigint> {
   if (cached !== null) return cached;
 
   try {
-    // Query CusdToken's total_supply using Odra dictionary
-    const supplyBytes = await queryOdraDictionary(
-      STATE_UREFS.cusdToken,
-      CUSD_INDICES.total_supply
-    );
+    // Query CEP-18 total_supply URef directly
+    const supplyBytes = await queryCep18TotalSupply();
 
     if (!supplyBytes) {
       console.log("[queryTotalSupply] No bytes returned");
       return BigInt(0);
     }
 
-    const supply = parseU256FromHex(supplyBytes);
+    const supply = parseCep18U256(supplyBytes);
     console.log("[queryTotalSupply] Parsed:", supply.toString());
     setCache(cacheKey, supply);
     return supply;
@@ -634,6 +707,81 @@ export async function queryTotalSupply(): Promise<bigint> {
     console.error("Failed to query total supply:", error);
     return BigInt(0);
   }
+}
+
+// Query CEP-18 total_supply directly from the named key URef
+async function queryCep18TotalSupply(): Promise<string | null> {
+  try {
+    const totalSupplyUref = CEP18_UREFS.totalSupply;
+    if (!totalSupplyUref) {
+      console.error('[queryCep18TotalSupply] No total supply URef configured');
+      return null;
+    }
+
+    // Get latest state root hash
+    const stateRootResponse = await fetch('/api/rpc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'chain_get_state_root_hash',
+        params: []
+      })
+    });
+    const stateRootResult = await stateRootResponse.json();
+    const stateRootHash = stateRootResult.result?.state_root_hash;
+
+    if (!stateRootHash) {
+      console.error('[queryCep18TotalSupply] Failed to get state root hash');
+      return null;
+    }
+
+    // Query the URef directly using query_global_state
+    const response = await fetch('/api/rpc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'query_global_state',
+        params: {
+          state_identifier: { StateRootHash: stateRootHash },
+          key: totalSupplyUref,
+          path: []
+        }
+      })
+    });
+
+    const result = await response.json();
+    console.log('[queryCep18TotalSupply] Result:', result);
+
+    if (result.result?.stored_value?.CLValue?.bytes) {
+      return result.result.stored_value.CLValue.bytes;
+    }
+    return null;
+  } catch (error) {
+    console.error('Failed to query CEP-18 total supply:', error);
+    return null;
+  }
+}
+
+// Parse U256 from CEP-18 format (just the raw bytes, no outer wrapper)
+function parseCep18U256(hex: string): bigint {
+  if (!hex || hex.length === 0) return BigInt(0);
+  const bytes = hexToBytes(hex);
+  if (bytes.length === 0) return BigInt(0);
+
+  // CEP-18 stores U256 as: [length byte] [little-endian bytes...]
+  const length = bytes[0];
+  if (length === 0) return BigInt(0);
+
+  let value = BigInt(0);
+  for (let i = 0; i < length && (1 + i) < bytes.length; i++) {
+    value = value | (BigInt(bytes[1 + i]) << BigInt(i * 8));
+  }
+
+  return value;
 }
 
 export async function queryLiquidationStats(): Promise<LiquidationStats | null> {
